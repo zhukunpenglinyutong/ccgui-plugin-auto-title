@@ -1,8 +1,8 @@
 {
   "id": "auto-title",
   "name": "会话自动命名",
-  "version": "0.5.0",
-  "sdkVersion": ">=0.3.6",
+  "version": "0.6.0",
+  "sdkVersion": ">=0.3.7",
   "minAppVersion": "1.0.2",
   "author": "zhukunpenglinyutong",
   "description": "每轮对话结束后用本机 CLI 或 DeepSeek 生成「emoji + 对象｜目标」式会话标题，支持 codex / omp / pi / claude；不覆盖手动改名，可暂停、可只命名一次。",
@@ -17,6 +17,7 @@
     "ui:settings-section",
     "ui:command",
     "ui:session-menu",
+    "host:session",
     "exec:python3",
     "exec:claude",
     "exec:codex",

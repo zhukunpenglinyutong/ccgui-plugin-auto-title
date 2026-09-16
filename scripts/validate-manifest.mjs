@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-/** 宿主已知的基座权限（15 项；未知权限 = 安装拒绝）。 */
+/** 宿主已知的基座权限（19 项；未知权限 = 安装拒绝）。 */
 const KNOWN_PERMISSIONS = new Set([
   "storage",
   "ui:settings-section",
@@ -27,6 +27,9 @@ const KNOWN_PERMISSIONS = new Set([
   "events",
   "network:none",
   "composer:draft",
+  "host:session",
+  "host:workspace",
+  "host:workspace:remote",
 ]);
 
 /** network: 授权体：<host>（任意端口）/ <host>:<port> / <host>:<a>-<b>（含端点）。 */

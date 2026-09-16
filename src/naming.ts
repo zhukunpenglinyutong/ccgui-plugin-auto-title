@@ -231,6 +231,9 @@ export class Namer {
       }
       await this.saveNamed(key, { ...known, lastCount: snap.turns.length, at: Date.now() });
       this.setDone("healed", known.title);
+      // 写库绕过了宿主（helper 直写 sqlite），主动请宿主刷新会话目录，
+      // 否则补写的标题要等手动同步/重启才显示。
+      await this.ctx.sessions.refresh();
       return;
     }
     // 关闭「跟随话题演进」时已知会话到此为止；上面的自愈补写不调模型、
@@ -302,5 +305,7 @@ export class Namer {
       at: Date.now(),
     });
     this.setDone("renamed", candidate.title);
+    // 同上：直写 sqlite / 转录行后请宿主刷新，侧栏立即显示新标题。
+    await this.ctx.sessions.refresh();
   }
 }

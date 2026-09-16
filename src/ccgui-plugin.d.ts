@@ -6,7 +6,7 @@
  * 插件仓用法（包未发布 npm 前的过渡方案）：复制本文件为插件仓的
  * `src/ccgui-plugin.d.ts`，首行版本戳必须与所用宿主 SDK 一致。
  *
- * @ccgui/plugin-sdk v0.3.6
+ * @ccgui/plugin-sdk v0.3.7
  */
 
 /** 宿主实现的 SDK 契约版本。 */
@@ -216,6 +216,10 @@ export interface PluginContext {
    *  卸载时自动注销。 */
   sessions: {
     selectSession(engine: string, sessionId: string, workspacePath: string): Promise<void>;
+    /** 请求宿主立即刷新会话目录（侧栏/标签页），0.3.7 起。
+     *  插件绕过宿主直写会话数据（如 sqlite custom_title、转录 title 行）后
+     *  调用——否则变更要等用户手动同步或下次常规刷新才可见。 */
+    refresh(): Promise<void>;
     registerSource(def: {
       /** 源 id,插件内唯一;同 id 重复登记覆盖(热重载语义)。 */
       id: string;
