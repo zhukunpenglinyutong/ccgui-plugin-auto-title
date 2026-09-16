@@ -1,0 +1,24 @@
+{
+  "name": "ccgui-plugin-auto-title",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CC GUI 插件：Codex 会话自动命名（参考 oil-codex-title）",
+  "type": "module",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "validate": "node scripts/validate-manifest.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.6.2",
+    "vite": "^6"
+  }
+}

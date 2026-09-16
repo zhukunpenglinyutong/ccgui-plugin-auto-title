@@ -1,0 +1,64 @@
+{
+  "id": "auto-title",
+  "name": "会话自动命名",
+  "version": "0.5.0",
+  "sdkVersion": ">=0.3.6",
+  "minAppVersion": "1.0.2",
+  "author": "zhukunpenglinyutong",
+  "description": "每轮对话结束后用本机 CLI 或 DeepSeek 生成「emoji + 对象｜目标」式会话标题，支持 codex / omp / pi / claude；不覆盖手动改名，可暂停、可只命名一次。",
+  "repo": "zhukunpenglinyutong/ccgui-plugin-auto-title",
+  "license": "MIT",
+  "keywords": ["title", "naming", "session", "auto-title"],
+  "tier": "js",
+  "permissions": [
+    "events",
+    "storage",
+    "ui:status-bar",
+    "ui:settings-section",
+    "ui:command",
+    "ui:session-menu",
+    "exec:python3",
+    "exec:claude",
+    "exec:codex",
+    "exec:gemini",
+    "exec:omp",
+    "exec:pi",
+    "network:api.deepseek.com"
+  ],
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "title": "启用自动命名",
+        "description": "关闭后不再触发命名（已生成的标题保留）。",
+        "default": true
+      },
+      "backend": {
+        "type": "string",
+        "title": "命名模型后端",
+        "description": "claude/codex/gemini 用本机已登录的 CLI 账号，不额外配置密钥；deepseek 走 OpenAI 兼容 API，需填 API Key。",
+        "enum": ["claude", "codex", "gemini", "omp", "pi", "deepseek"],
+        "default": "claude"
+      },
+      "apiKey": {
+        "type": "string",
+        "title": "DeepSeek API Key（仅 deepseek 后端）",
+        "description": "明文存于本机插件存储，只发往 api.deepseek.com。",
+        "default": ""
+      },
+      "model": {
+        "type": "string",
+        "title": "模型（可选）",
+        "description": "留空用默认：claude 缺省 haiku，deepseek 缺省 deepseek-chat，其他用 CLI 自己的默认。例如 claude 填 sonnet、gemini 填 gemini-2.5-flash。",
+        "default": ""
+      },
+      "updateExisting": {
+        "type": "boolean",
+        "title": "跟随话题演进重命名",
+        "description": "开启后每轮结束重新评估；话题实质变化时才改名（模型可自行判断 keep）。关闭则只命名没有标题的会话。",
+        "default": true
+      }
+    }
+  }
+}
