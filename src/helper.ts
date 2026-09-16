@@ -18,6 +18,7 @@
  * 快照里的当前标题/冲突标题统一读 app.db（显示事实源），避免各引擎格式漂移。
  */
 export const HELPER_SCRIPT = String.raw`
+import io
 import glob
 import json
 import os
@@ -25,6 +26,14 @@ import re
 import sqlite3
 import sys
 from datetime import datetime, timezone
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+elif sys.version_info[0] >= 3:
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 ENV_RE = re.compile(r"<environment_context\b[^>]*>.*?</environment_context>", re.S)
 INSTR_RE = re.compile(r"<user_instructions\b[^>]*>.*?</user_instructions>", re.S)

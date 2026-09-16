@@ -28,10 +28,13 @@
 - 设置 → 插件 → 自动命名：后端探测、已命名会话列表（含引擎）、固定标题、手动重新命名。
 - 配置项：启用开关、后端、模型、DeepSeek API Key、`跟随话题演进重命名`（关闭则只命名无标题会话）。
 
-## 边界
+## 边界与运行环境注意
 
 - 标题显示依赖宿主扫描时机（窗口聚焦 / 下一轮结束 / 状态栏同步按钮），不是写入即刷新。
 - 仅桌面端可用（依赖本机 python3 与 CLI）；浏览器端插件自呈现不可用。
+- **Windows 系统注意事项**：
+  - Windows 环境下官方 Python 默认仅提供 `python.exe`，若遇到 `binary not found on PATH: python3` 报错，请在 Python 安装目录复制 `python.exe` 为 `python3.exe`（或添加命令别名/软链接）。
+  - 内嵌 Python 脚本已默认配置 UTF-8 stdout 输出，防止 Windows 默认 GBK 代码页输出 Emoji 标题时报错。
 - kimi/grok/dsh/agy/opencode/qoder 会话不触发（usage 事件有但无对应通道，未适配）。
 
 ## 开发
