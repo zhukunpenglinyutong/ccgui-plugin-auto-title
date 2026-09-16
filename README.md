@@ -28,11 +28,19 @@
 - 设置 → 插件 → 自动命名：后端探测、已命名会话列表（含引擎）、固定标题、手动重新命名。
 - 配置项：启用开关、后端、模型、DeepSeek API Key、`跟随话题演进重命名`（关闭则只命名无标题会话）。
 
-## 边界
+## 边界与常见排查（避坑指引）
 
-- 标题显示依赖宿主扫描时机（窗口聚焦 / 下一轮结束 / 状态栏同步按钮），不是写入即刷新。
-- 仅桌面端可用（依赖本机 python3 与 CLI）；浏览器端插件自呈现不可用。
-- kimi/grok/dsh/agy/opencode/qoder 会话不触发（usage 事件有但无对应通道，未适配）。
+- **Windows 系统环境**：
+  - **找不到 python3**：Windows 官方 Python 默认只有 `python.exe` 没有 `python3.exe`。若提示 `auto-title: binary not found on PATH: python3`，请在 Python 安装目录复制 `python.exe` 为 `python3.exe`（或添加别名/软链接）。
+  - **Unicode/Emoji GBK 编码崩溃**：Windows 终端默认代码页为 `cp936` (GBK)，当会话文本或标题中包含数学符号（如减号 `−`）、特殊字符或 Emoji 时易触发 `UnicodeEncodeError`（内嵌脚本已内置强制 UTF-8 stdout/stderr 修复）。
+- **模型授权与 403 退出**：
+  - `claude` 后端默认调用 `haiku` 模型。若使用的自定义中转 API Key 未授权 haiku（例如仅开放 Gemini 或特定模型），会报 `claude exited 1 / 403` 导致命名静默跳过。此时必须在插件设置里将「模型（可选）」指定为已授权的具体模型名称（如 `gemini-3.8-flash-high`、`sonnet` 等）。
+- **多会话与工作区自动命名触发**：
+  - 插件依附于每轮对话结束后的 `usage://updated` 事件并防抖 8 秒触发。
+  - 对于无实质内容（如纯问候）、或之前因模型报错判定失败的会话，插件为避免重复消耗 Token 不会自动循环轮询；可通过右键会话菜单选择「重新命名（自动）」或 `Ctrl+K / ⌘K` 执行「立即命名最近会话」强制触发。
+- **支持范围**：
+  - 仅桌面端可用（依赖本机 python3 与 CLI）；浏览器端插件自呈现不可用。
+  - 目前支持 codex / omp / pi / claude 引擎；kimi/grok/dsh/agy/opencode/qoder 暂未适配。
 
 ## 开发
 
