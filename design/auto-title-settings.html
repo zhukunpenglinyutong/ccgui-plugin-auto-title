@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自动命名 · 设置面板交互稿（shadcn/ui new-york · zinc）</title>
+<style>
+/* ============================================================
+   shadcn/ui（new-york · zinc）设计 token —— 与 react-doctor 同源
+   明暗双套，跟随 body.dark 切换
+   ============================================================ */
+:root {
+  --fg: #18181b;
+  --fg-strong: #09090b;
+  --dim: #71717a;
+  --dim-2: #a1a1aa;
+  --card: #ffffff;
+  --bg: #fafafa;
+  --line: #e4e4e7;
+  --line-strong: #d4d4d8;
+  --inset: #f4f4f5;
+  --primary: #18181b;
+  --primary-hover: #3f3f46;
+  --primary-fg: #fafafa;
+  --ring: rgba(24, 24, 27, 0.16);
+  --ok: #16a34a;
+  --ok-soft: rgba(22, 163, 74, 0.12);
+  --warn: #d97706;
+  --warn-soft: rgba(217, 119, 6, 0.14);
+  --bad: #dc2626;
+  --bad-soft: rgba(220, 38, 38, 0.10);
+  --track: #ececef;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-pop: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+body.dark {
+  --fg: #fafafa;
+  --fg-strong: #fafafa;
+  --dim: #a1a1aa;
+  --dim-2: #71717a;
+  --card: #101013;
+  --bg: #09090b;
+  --line: rgba(255, 255, 255, 0.12);
+  --line-strong: rgba(255, 255, 255, 0.22);
+  --inset: rgba(255, 255, 255, 0.06);
+  --primary: #fafafa;
+  --primary-hover: #d4d4d8;
+  --primary-fg: #18181b;
+  --ring: rgba(255, 255, 255, 0.2);
+  --ok: #4ade80;
+  --ok-soft: rgba(74, 222, 128, 0.14);
+  --warn: #fbbf24;
+  --warn-soft: rgba(251, 191, 36, 0.14);
+  --bad: #f87171;
+  --bad-soft: rgba(248, 113, 113, 0.13);
+  --track: rgba(255, 255, 255, 0.1);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-pop: 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+/* ---------------- 交互稿外壳（非插件部分） ---------------- */
+.mock-bar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 20px;
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+.mock-bar .mock-title { font-weight: 600; font-size: 13px; margin-right: 8px; }
+.mock-tab {
+  padding: 5px 12px; border-radius: 999px; font-size: 12.5px;
+  color: var(--dim); border: 1px solid transparent;
+}
+.mock-tab:hover { color: var(--fg); }
+.mock-tab.active {
+  background: var(--inset); color: var(--fg-strong);
+  border-color: var(--line); font-weight: 600;
+}
+.mock-bar .spacer { flex: 1; }
+.mock-dark {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  color: var(--dim); font-size: 12px;
+}
+.mock-dark:hover { color: var(--fg); background: var(--inset); }
+.mock-note {
+  padding: 8px 20px; font-size: 12px; color: var(--dim);
+  border-bottom: 1px dashed var(--line); background: var(--bg);
+}
+.variant { display: none; }
+.variant.active { display: block; }
+
+/* 模拟宿主设置面板容器：白底圆角面板，宽度与截图一致 */
+.stage {
+  max-width: 720px;
+  margin: 28px auto 64px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-pop);
+  padding: 22px 24px 26px;
+}
+
+/* ---------------- shadcn 基础组件 ---------------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.card + .card { margin-top: 14px; }
+.card-head { padding: 14px 16px 0; }
+.card-title { font-size: 14px; font-weight: 600; color: var(--fg-strong); }
+.card-desc { font-size: 12px; color: var(--dim); margin-top: 3px; }
+.card-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px; }
+.card-foot {
+  padding: 12px 16px; border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 10px;
+  background: color-mix(in srgb, var(--inset) 45%, transparent);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 21px; padding: 0 8px;
+  font-size: 11.5px; font-weight: 600; line-height: 1;
+  border-radius: 999px; border: 1px solid transparent;
+  white-space: nowrap;
+}
+.badge-ok   { color: var(--ok);  background: var(--ok-soft); }
+.badge-warn { color: var(--warn); background: var(--warn-soft); }
+.badge-bad  { color: var(--bad); background: var(--bad-soft); }
+.badge-outline { color: var(--dim); border-color: var(--line-strong); background: transparent; font-weight: 500; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 0 14px;
+  font-size: 12.5px; font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--primary); color: var(--primary-fg); }
+.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-outline { border-color: var(--line-strong); background: var(--card); color: var(--fg); }
+.btn-outline:hover:not(:disabled) { background: var(--inset); }
+.btn-ghost { color: var(--dim); }
+.btn-ghost:hover:not(:disabled) { background: var(--inset); color: var(--fg); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn .spin {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.input, .select {
+  width: 100%; height: 32px; padding: 0 10px;
+  font-size: 12.5px;
+  background: var(--card);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.input:focus, .select:focus { border-color: var(--fg); box-shadow: 0 0 0 3px var(--ring); }
+.input::placeholder { color: var(--dim-2); }
+.input.mono { font-family: var(--mono); font-size: 12px; letter-spacing: 0.3px; }
+.select {
+  appearance: none;
+  padding-right: 28px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--dim) 50%), linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.input-wrap { position: relative; }
+.input-wrap .input { padding-right: 34px; }
+.eye {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--dim);
+}
+.eye:hover { background: var(--inset); color: var(--fg); }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 12.5px; font-weight: 600; color: var(--fg-strong); }
+.field-label .opt { font-weight: 400; color: var(--dim-2); margin-left: 4px; font-size: 11.5px; }
+.field-hint { font-size: 11.5px; color: var(--dim); }
+
+.separator { height: 1px; background: var(--line); border: none; }
+
+/* shadcn Switch */
+.switch {
+  position: relative; flex: none;
+  width: 36px; height: 20px; border-radius: 999px;
+  background: var(--track);
+  transition: background 0.15s;
+}
+.switch::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  transition: transform 0.15s;
+}
+.switch[aria-checked="true"] { background: var(--primary); }
+.switch[aria-checked="true"]::after { transform: translateX(16px); }
+.switch-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+}
+.switch-row .switch { margin-top: 2px; }
+
+/* shadcn Alert */
+.alert {
+  display: flex; gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+.alert-ok  { border-color: color-mix(in srgb, var(--ok) 35%, transparent);  background: var(--ok-soft); }
+.alert-bad { border-color: color-mix(in srgb, var(--bad) 35%, transparent); background: var(--bad-soft); }
+.alert .alert-title { font-weight: 600; color: var(--fg-strong); }
+.alert-ok .alert-title { color: var(--ok); }
+.alert-bad .alert-title { color: var(--bad); }
+.alert .alert-body { color: var(--dim); margin-top: 1px; word-break: break-all; }
+.alert svg { flex: none; margin-top: 1px; }
+
+/* 可用性 chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 22px; padding: 0 8px;
+  font-size: 11.5px; font-weight: 500;
+  border-radius: 6px;
+  background: var(--inset);
+  color: var(--dim);
+  border: 1px solid var(--line);
+}
+.chip.ok { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
+.chip .mono { font-family: var(--mono); }
+
+.kv { display: flex; flex-direction: column; gap: 8px; }
+.kv-row { display: flex; align-items: baseline; gap: 10px; font-size: 12.5px; }
+.kv-row .k { color: var(--dim); flex: none; }
+.kv-row .v { color: var(--fg); min-width: 0; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.page-head { margin-bottom: 16px; }
+.page-head h3 { font-size: 16px; font-weight: 700; color: var(--fg-strong); }
+.page-head p { font-size: 12px; color: var(--dim); margin-top: 3px; }
+
+/* ---------------- 方案 B：后端选择卡 ---------------- */
+.be-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.be-card {
+  position: relative;
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  text-align: left;
+  transition: border-color 0.12s, box-shadow 0.12s, background 0.12s;
+}
+.be-card:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--inset) 40%, var(--card)); }
+.be-card.selected {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 1px var(--fg);
+}
+.be-card .be-name { font-size: 12.5px; font-weight: 600; font-family: var(--mono); color: var(--fg-strong); display: flex; align-items: center; gap: 6px; }
+.be-card .be-kind { font-size: 11px; color: var(--dim-2); }
+.be-card .be-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; margin-top: 2px; }
+.be-card .be-status.ok { color: var(--ok); }
+.be-card .be-status.no { color: var(--dim-2); }
+.be-card .be-check {
+  position: absolute; top: 8px; right: 8px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--primary); color: var(--primary-fg);
+  display: none; align-items: center; justify-content: center;
+}
+.be-card.selected .be-check { display: inline-flex; }
+
+/* ---------------- 方案 C：步骤手风琴 ---------------- */
+.step { border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+.step + .step { margin-top: 10px; }
+.step-head {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 13px 16px; text-align: left;
+}
+.step-head:hover { background: color-mix(in srgb, var(--inset) 40%, transparent); }
+.step-num {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11.5px; font-weight: 600; color: var(--dim);
+  background: var(--card);
+}
+.step.done .step-num { background: var(--primary); border-color: var(--primary); color: var(--primary-fg); }
+.step-head .step-title { font-size: 13px; font-weight: 600; color: var(--fg-strong); }
+.step-head .step-sub { font-size: 11.5px; color: var(--dim); margin-top: 1px; }
+.step-head .chev { margin-left: auto; color: var(--dim-2); transition: transform 0.15s; flex: none; }
+.step.open .chev { transform: rotate(180deg); }
+.step-body { display: none; padding: 2px 16px 16px 50px; flex-direction: column; gap: 14px; }
+.step.open .step-body { display: flex; }
+
+.inline-test { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.small { font-size: 11.5px; color: var(--dim); }
+.mono { font-family: var(--mono); }
+.foot-hint {
+  margin-top: 16px; padding-top: 12px;
+  border-top: 1px dashed var(--line);
+  font-size: 11.5px; color: var(--dim-2); line-height: 1.7;
+}
+.radio-row { display: flex; flex-direction: column; gap: 8px; }
+.radio-opt {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: pointer; transition: border-color 0.12s, background 0.12s;
+}
+.radio-opt:hover { background: color-mix(in srgb, var(--inset) 40%, var(--card)); }
+.radio-opt.on { border-color: var(--fg); box-shadow: 0 0 0 1px var(--fg); }
+.radio-opt .r {
+  flex: none; width: 14px; height: 14px; margin-top: 2px;
+  border-radius: 50%; border: 1.5px solid var(--line-strong);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.radio-opt.on .r { border-color: var(--fg); }
+.radio-opt.on .r::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); }
+.radio-opt .r-title { font-size: 12.5px; font-weight: 600; }
+.radio-opt .r-desc { font-size: 11.5px; color: var(--dim); margin-top: 1px; }
+</style>
+</head>
+<body>
+
+<!-- ============ 交互稿外壳（审批用，不属于插件） ============ -->
+<div class="mock-bar">
+  <span class="mock-title">自动命名 · 交互稿</span>
+  <button class="mock-tab active" data-v="a">方案 A · 分节卡片</button>
+  <button class="mock-tab" data-v="b">方案 B · 后端选择卡</button>
+  <button class="mock-tab" data-v="c">方案 C · 引导步骤</button>
+  <span class="spacer"></span>
+  <button class="mock-dark" id="darkToggle">◐ 切换暗色</button>
+</div>
+<div class="mock-note" id="variantNote"></div>
+
+<!-- ============================================================
+     方案 A：分节卡片 —— shadcn 经典 settings 页
+     ============================================================ -->
+<div class="variant active" id="v-a">
+  <div class="stage">
+    <div class="page-head">
+      <h3>自动命名</h3>
+      <p>每个会话在首次实质对话后自动命名一次。</p>
+    </div>
+
+    <!-- 状态卡 -->
+    <div class="card">
+      <div class="card-head" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title">运行状态</div>
+        <span class="badge badge-ok"><span class="dot pulse"></span>运行中</span>
+      </div>
+      <div class="card-body">
+        <div class="chips">
+          <span class="chip ok"><span class="dot"></span><span class="mono">claude</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">codex</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">gemini</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">omp</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">pi</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">deepseek</span>&nbsp;已配置密钥</span>
+        </div>
+        <hr class="separator">
+        <div class="kv">
+          <div class="kv-row">
+            <span class="k">最近命名</span>
+            <span class="v ellipsis">🦉 react-doctor 插件面板 | 基于 shadcnUI 重写 UI/UX</span>
+          </div>
+          <div class="kv-row">
+            <span class="k"></span>
+            <span class="v small">2026/9/21 22:47:39 · 命名后聚焦窗口或再聊一轮即可在宿主看到</span>
+          </div>
+        </div>
+        <div class="alert alert-bad" id="a-error" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div class="alert-title">最近一次命名失败</div>
+            <div class="alert-body">codex / 9f3a2c1d… · 2026/9/21 22:31:02 — HTTP 429: rate limit</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配置卡 -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">命名模型</div>
+        <div class="card-desc">用哪个后端为会话起标题。</div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="field-label">后端</label>
+          <select class="select backend-select" data-scope="a">
+            <option value="claude">claude (CLI)</option>
+            <option value="codex">codex (CLI)</option>
+            <option value="gemini">gemini (CLI)</option>
+            <option value="omp">omp (CLI)</option>
+            <option value="pi">pi (CLI)</option>
+            <option value="deepseek" selected>deepseek (API)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">模型<span class="opt">可选，留空用默认</span></label>
+          <input class="input mono" value="deepseek-flash" placeholder="deepseek-chat">
+        </div>
+        <div class="field apikey-field" data-scope="a">
+          <label class="field-label">DeepSeek API Key</label>
+          <div class="input-wrap">
+            <input class="input mono" type="password" value="sk-9f2d8c7b6a5e4d3c2b1a0987">
+            <button class="eye" title="显示/隐藏">👁</button>
+          </div>
+          <p class="field-hint">明文存于本机插件存储，只发往 api.deepseek.com。</p>
+        </div>
+        <hr class="separator">
+        <div class="switch-row">
+          <div>
+            <div class="field-label">跟随话题演进重命名</div>
+            <p class="field-hint" style="margin-top:3px;max-width:52ch;">开启后每轮结束重新评估（消耗命名模型 token）；关闭则只在首次有实质内容时命名一次。你在宿主里手动改名的会话不会被覆盖。</p>
+          </div>
+          <button class="switch" role="switch" aria-checked="false"></button>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn btn-outline test-btn" data-scope="a">测试连接</button>
+        <span class="small test-status" data-scope="a"></span>
+      </div>
+    </div>
+
+    <p class="foot-hint">标题写向：codex → session_index.jsonl；omp / pi / claude → 宿主 custom_title（omp / pi 同时改写转录 title 行）。</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     方案 B：后端选择卡 —— 选择驱动表单
+     ============================================================ -->
+<div class="variant" id="v-b">
+  <div class="stage">
+    <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <h3>自动命名</h3>
+        <p>每个会话在首次实质对话后自动命名一次。</p>
+      </div>
+      <span class="badge badge-ok"><span class="dot pulse"></span>运行中</span>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">选择命名后端</div>
+        <div class="card-desc">绿色圆点表示本机探测可用；deepseek 使用 API 密钥。</div>
+      </div>
+      <div class="card-body">
+        <div class="be-grid" id="beGrid">
+          <button class="be-card" data-be="claude">
+            <span class="be-name">claude</span>
+            <span class="be-kind">CLI · 本机进程</span>
+            <span class="be-status ok"><span class="dot"></span>可用</span>
+            <span class="be-check">✓</span>
+          </button>
+          <button class="be-card" data-be="codex">
+            <span class="be-name">codex</span>
+            <span class="be-kind">CLI · 本机进程</span>
+            <span class="be-status ok"><span class="dot"></span>可用</span>
+            <span class="be-check">✓</span>
+          </button>
+          <button class="be-card" data-be="gemini">
+            <span class="be-name">gemini</span>
+            <span class="be-kind">CLI · 本机进程</span>
+            <span class="be-status ok"><span class="dot"></span>可用</span>
+            <span class="be-check">✓</span>
+          </button>
+          <button class="be-card" data-be="omp">
+            <span class="be-name">omp</span>
+            <span class="be-kind">CLI · 本机进程</span>
+            <span class="be-status ok"><span class="dot"></span>可用</span>
+            <span class="be-check">✓</span>
+          </button>
+          <button class="be-card" data-be="pi">
+            <span class="be-name">pi</span>
+            <span class="be-kind">CLI · 本机进程</span>
+            <span class="be-status ok"><span class="dot"></span>可用</span>
+            <span class="be-check">✓</span>
+          </button>
+          <button class="be-card selected" data-be="deepseek">
+            <span class="be-name">deepseek</span>
+            <span class="be-kind">API · api.deepseek.com</span>
+            <span class="be-status ok"><span class="dot"></span>已配置密钥</span>
+            <span class="be-check">✓</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 随后端切换的配置卡 -->
+    <div class="card" id="b-config">
+      <div class="card-head" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="card-title mono" id="b-config-title">deepseek</div>
+        <span class="badge badge-outline" id="b-config-kind">API 后端</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label class="field-label">模型<span class="opt">可选，留空用默认</span></label>
+          <input class="input mono" value="deepseek-flash" placeholder="deepseek-chat" id="b-model">
+        </div>
+        <div class="field" id="b-apikey">
+          <label class="field-label">DeepSeek API Key</label>
+          <div class="input-wrap">
+            <input class="input mono" type="password" value="sk-9f2d8c7b6a5e4d3c2b1a0987">
+            <button class="eye" title="显示/隐藏">👁</button>
+          </div>
+          <p class="field-hint">明文存于本机插件存储，只发往 api.deepseek.com。</p>
+        </div>
+        <div class="alert" id="b-cli-note" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <div>
+            <div class="alert-title" style="color:var(--fg-strong)">CLI 后端无需密钥</div>
+            <div class="alert-body" id="b-cli-path">调用本机 claude 命令行，沿用其已登录的凭据。</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="btn btn-outline test-btn" data-scope="b">测试连接</button>
+        <span class="small test-status" data-scope="b"></span>
+      </div>
+    </div>
+
+    <!-- 行为 + 状态合并卡 -->
+    <div class="card">
+      <div class="card-body">
+        <div class="switch-row">
+          <div>
+            <div class="field-label">跟随话题演进重命名</div>
+            <p class="field-hint" style="margin-top:3px;max-width:52ch;">开启后每轮结束重新评估（消耗命名模型 token）；关闭则只在首次有实质内容时命名一次。手动改名的会话不会被覆盖。</p>
+          </div>
+          <button class="switch" role="switch" aria-checked="false"></button>
+        </div>
+        <hr class="separator">
+        <div class="kv">
+          <div class="kv-row">
+            <span class="k">最近命名</span>
+            <span class="v ellipsis">🦉 react-doctor 插件面板 | 基于 shadcnUI 重写 UI/UX</span>
+          </div>
+          <div class="kv-row">
+            <span class="k"></span>
+            <span class="v small">2026/9/21 22:47:39 · codex 写 session_index.jsonl；omp / pi / claude 写宿主 custom_title</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     方案 C：引导步骤 —— 渐进披露
+     ============================================================ -->
+<div class="variant" id="v-c">
+  <div class="stage">
+    <div class="page-head" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+      <div>
+        <h3>自动命名</h3>
+        <p>每个会话在首次实质对话后自动命名一次。</p>
+      </div>
+      <span class="badge badge-ok"><span class="dot pulse"></span>运行中</span>
+    </div>
+
+    <!-- 步骤 1 -->
+    <div class="step done open" data-step>
+      <button class="step-head">
+        <span class="step-num">✓</span>
+        <span>
+          <span class="step-title">运行状态</span>
+          <div class="step-sub">6 个后端全部可用 · 最近命名 22:47</div>
+        </span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="step-body">
+        <div class="chips">
+          <span class="chip ok"><span class="dot"></span><span class="mono">claude</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">codex</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">gemini</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">omp</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">pi</span></span>
+          <span class="chip ok"><span class="dot"></span><span class="mono">deepseek</span>&nbsp;已配置密钥</span>
+        </div>
+        <div class="kv">
+          <div class="kv-row">
+            <span class="k">最近命名</span>
+            <span class="v ellipsis">🦉 react-doctor 插件面板 | 基于 shadcnUI 重写 UI/UX</span>
+          </div>
+          <div class="kv-row">
+            <span class="k"></span>
+            <span class="v small">2026/9/21 22:47:39</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 2 -->
+    <div class="step done" data-step>
+      <button class="step-head">
+        <span class="step-num">✓</span>
+        <span>
+          <span class="step-title">命名后端</span>
+          <div class="step-sub" id="c-be-sub">deepseek (API) · deepseek-flash</div>
+        </span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="step-body">
+        <div class="field">
+          <label class="field-label">后端</label>
+          <select class="select backend-select" data-scope="c">
+            <option value="claude">claude (CLI)</option>
+            <option value="codex">codex (CLI)</option>
+            <option value="gemini">gemini (CLI)</option>
+            <option value="omp">omp (CLI)</option>
+            <option value="pi">pi (CLI)</option>
+            <option value="deepseek" selected>deepseek (API)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">模型<span class="opt">可选，留空用默认</span></label>
+          <input class="input mono" value="deepseek-flash" placeholder="deepseek-chat" id="c-model">
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 3 -->
+    <div class="step done" data-step id="c-step-key">
+      <button class="step-head">
+        <span class="step-num">✓</span>
+        <span>
+          <span class="step-title">API 凭据</span>
+          <div class="step-sub" id="c-key-sub">DeepSeek API Key 已配置</div>
+        </span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="step-body">
+        <div class="field">
+          <label class="field-label">DeepSeek API Key</label>
+          <div class="input-wrap">
+            <input class="input mono" type="password" value="sk-9f2d8c7b6a5e4d3c2b1a0987">
+            <button class="eye" title="显示/隐藏">👁</button>
+          </div>
+          <p class="field-hint">明文存于本机插件存储，只发往 api.deepseek.com。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 步骤 4 -->
+    <div class="step" data-step id="c-step-test">
+      <button class="step-head">
+        <span class="step-num">4</span>
+        <span>
+          <span class="step-title">行为与验证</span>
+          <div class="step-sub">重命名策略 · 连通性测试</div>
+        </span>
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="step-body">
+        <div class="radio-row" id="c-policy">
+          <label class="radio-opt on">
+            <span class="r"></span>
+            <span>
+              <span class="r-title">只命名一次（推荐）</span>
+              <div class="r-desc">首次有实质内容时命名，不消耗额外 token。</div>
+            </span>
+          </label>
+          <label class="radio-opt">
+            <span class="r"></span>
+            <span>
+              <span class="r-title">跟随话题演进重命名</span>
+              <div class="r-desc">每轮结束重新评估，消耗命名模型 token；手动改名的会话不覆盖。</div>
+            </span>
+          </label>
+        </div>
+        <hr class="separator">
+        <div class="inline-test">
+          <button class="btn btn-primary test-btn" data-scope="c">测试连接</button>
+          <span class="small test-status" data-scope="c"></span>
+        </div>
+      </div>
+    </div>
+
+    <p class="foot-hint">标题写向：codex → session_index.jsonl；omp / pi / claude → 宿主 custom_title（omp / pi 同时改写转录 title 行）。聚焦窗口或再聊一轮后显示。</p>
+  </div>
+</div>
+
+<script>
+/* ---------- 交互稿外壳 ---------- */
+const notes = {
+  a: "方案 A · 分节卡片：shadcn 经典 settings 结构 —— 状态 / 命名模型 / 测试三张 Card，信息分区清晰，改动最小、最稳妥。",
+  b: "方案 B · 后端选择卡：后端做成可选中的状态卡（带探测结果），选中哪张就出哪套配置；CLI 后端自动隐藏密钥字段并提示无需凭据。",
+  c: "方案 C · 引导步骤：状态 → 后端 → 凭据 → 验证四步手风琴，已完成步骤打勾并折叠成一行摘要；重命名策略用单选卡表达，语义比裸开关更清楚。",
+};
+const variantNote = document.getElementById("variantNote");
+variantNote.textContent = notes.a;
+document.querySelectorAll(".mock-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".mock-tab").forEach((t) => t.classList.toggle("active", t === tab));
+    document.querySelectorAll(".variant").forEach((v) => v.classList.toggle("active", v.id === "v-" + tab.dataset.v));
+    variantNote.textContent = notes[tab.dataset.v];
+  });
+});
+document.getElementById("darkToggle").addEventListener("click", () => document.body.classList.toggle("dark"));
+
+/* ---------- shadcn Switch ---------- */
+document.querySelectorAll(".switch").forEach((sw) => {
+  sw.addEventListener("click", () => {
+    sw.setAttribute("aria-checked", sw.getAttribute("aria-checked") === "true" ? "false" : "true");
+  });
+});
+
+/* ---------- API Key 显隐 ---------- */
+document.querySelectorAll(".eye").forEach((eye) => {
+  eye.addEventListener("click", () => {
+    const input = eye.parentElement.querySelector("input");
+    input.type = input.type === "password" ? "text" : "password";
+  });
+});
+
+/* ---------- 测试连接模拟 ---------- */
+document.querySelectorAll(".test-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const status = document.querySelector(`.test-status[data-scope="${btn.dataset.scope}"]`);
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.innerHTML = '<span class="spin"></span>测试中…';
+    status.textContent = "";
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = original;
+      status.innerHTML = '<span style="color:var(--ok);font-weight:600;">✓ 连接成功</span> · 返回标题：「🦉 设置面板 UI 改版讨论」';
+    }, 1100);
+  });
+});
+
+/* ---------- 方案 B：后端卡选择驱动配置 ---------- */
+const beGrid = document.getElementById("beGrid");
+const bTitle = document.getElementById("b-config-title");
+const bKind = document.getElementById("b-config-kind");
+const bApikey = document.getElementById("b-apikey");
+const bCliNote = document.getElementById("b-cli-note");
+const bCliPath = document.getElementById("b-cli-path");
+const bModel = document.getElementById("b-model");
+const DEFAULT_MODELS = { claude: "claude-haiku", codex: "gpt-5.1-codex-mini", gemini: "gemini-2.5-flash", omp: "默认模型", pi: "默认模型", deepseek: "deepseek-chat" };
+beGrid.addEventListener("click", (e) => {
+  const card = e.target.closest(".be-card");
+  if (!card) return;
+  beGrid.querySelectorAll(".be-card").forEach((c) => c.classList.toggle("selected", c === card));
+  const be = card.dataset.be;
+  const isApi = be === "deepseek";
+  bTitle.textContent = be;
+  bKind.textContent = isApi ? "API 后端" : "CLI 后端";
+  bApikey.hidden = !isApi;
+  bCliNote.hidden = isApi;
+  bCliPath.textContent = `调用本机 ${be} 命令行，沿用其已登录的凭据。`;
+  bModel.placeholder = DEFAULT_MODELS[be];
+  bModel.value = "";
+});
+
+/* ---------- 方案 A/C：后端切换时密钥字段显隐 ---------- */
+document.querySelectorAll(".backend-select").forEach((sel) => {
+  sel.addEventListener("change", () => {
+    const isApi = sel.value === "deepseek";
+    if (sel.dataset.scope === "a") {
+      document.querySelector('.apikey-field[data-scope="a"]').style.display = isApi ? "" : "none";
+    }
+    if (sel.dataset.scope === "c") {
+      document.getElementById("c-step-key").style.display = isApi ? "" : "none";
+      document.getElementById("c-be-sub").textContent = `${sel.value} (${isApi ? "API" : "CLI"})`;
+    }
+  });
+});
+
+/* ---------- 方案 C：手风琴 ---------- */
+document.querySelectorAll("[data-step] .step-head").forEach((head) => {
+  head.addEventListener("click", () => head.parentElement.classList.toggle("open"));
+});
+
+/* ---------- 方案 C：策略单选卡 ---------- */
+const policy = document.getElementById("c-policy");
+policy.addEventListener("click", (e) => {
+  const opt = e.target.closest(".radio-opt");
+  if (!opt) return;
+  policy.querySelectorAll(".radio-opt").forEach((o) => o.classList.toggle("on", o === opt));
+});
+</script>
+</body>
+</html>

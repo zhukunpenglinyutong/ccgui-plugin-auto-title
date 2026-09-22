@@ -1,8 +1,13 @@
 /**
  * 全部 UI 只经 ctx.react（宿主 React）createElement + hooks 渲染，
  * 不起第二棵 React 树——组件很小，双段挂载在这里是纯负担。
+ *
+ * 设置页为「引导步骤」结构（shadcn/ui new-york · zinc 视觉体系，见
+ * design/auto-title-settings.html 方案 C）：状态 → 后端 → 凭据 → 行为与验证
+ * 四步手风琴，已完成步骤打勾并折叠成一行摘要；重命名策略用单选卡表达。
  */
 import type { PluginContext } from "./ccgui-plugin";
+import type { ReactNode } from "react";
 import { probeBackend, testBackend, BACKEND_DEFAULT_MODEL, BACKEND_IDS, type BackendId } from "./backends";
 import type { Copy } from "./i18n";
 import type { Config, Namer } from "./naming";
@@ -46,7 +51,9 @@ export function makeStatusChip(ctx: PluginContext, namer: Namer, t: Copy) {
   };
 }
 
-/** 设置页 section：状态、后端探测、命名模型配置与连通性测试。 */
+type StepId = "status" | "backend" | "creds" | "behavior";
+
+/** 设置页 section：状态总览、后端与模型、API 凭据、重命名策略与连通性测试。 */
 export function makeSettingsSection(ctx: PluginContext, namer: Namer, t: Copy) {
   const h = ctx.react;
   return function AutoTitleSettings() {
@@ -55,6 +62,13 @@ export function makeSettingsSection(ctx: PluginContext, namer: Namer, t: Copy) {
     const [cfg, setCfg] = h.useState<Config | null>(null);
     const [testing, setTesting] = h.useState(false);
     const [testResult, setTestResult] = h.useState<{ ok: boolean; text: string } | null>(null);
+    const [open, setOpen] = h.useState<Record<StepId, boolean>>({
+      status: true,
+      backend: false,
+      creds: false,
+      behavior: false,
+    });
+    const [showKey, setShowKey] = h.useState(false);
 
     h.useEffect(() => {
       let alive = true;
@@ -79,49 +93,26 @@ export function makeSettingsSection(ctx: PluginContext, namer: Namer, t: Copy) {
       };
     }, [cfg?.apiKey]);
 
-    const statusText = ctx.host.isWeb
-      ? t.statusWeb
-      : namer.paused
-        ? t.statusPaused
-        : cfg && !cfg.updateExisting
-          ? t.statusActiveOnce
-          : t.statusActive;
-    // 命名失败在后台队列里发生，用户无处可见；最近一条错误展示在这里，
-    // 下一次成功命名后由 Namer 清除并 notify 刷新。
-    const error = namer.lastError;
-    const errorRow = error
-      ? h.createElement(
-          "p",
-          { className: "auto-title-error" },
-          `${t.lastErrorPrefix}（${error.engine}/${error.sid.slice(0, 8)}… ${new Date(error.at).toLocaleString()}）：${error.message}`,
-        )
-      : null;
-    const done = namer.lastDone;
-    const doneRow = done
-      ? h.createElement(
-          "p",
-          { className: "auto-title-done" },
-          done.kind === "kept"
-            ? `${t.lastDonePrefix}（${new Date(done.at).toLocaleString()}）：${t.lastDoneKept}`
-            : `${t.lastDonePrefix}（${new Date(done.at).toLocaleString()}）：${done.title}`,
-        )
-      : null;
-
-    const backendRow = ctx.host.isWeb
-      ? null
-      : h.createElement(
+    if (ctx.host.isWeb) {
+      return h.createElement(
+        "div",
+        { className: "auto-title-root" },
+        h.createElement(
           "div",
-          { className: "auto-title-backends" },
-          BACKEND_IDS.map((id) =>
-            h.createElement(
-              "span",
-              { key: id, className: `auto-title-backend${probes[id] ? " ok" : ""}` },
-              id === "deepseek"
-                ? `${id}: ${probes[id] === undefined ? "…" : probes[id] ? t.deepseekReady : t.deepseekNoKey}`
-                : `${id}: ${probes[id] === undefined ? "…" : probes[id] ? t.backendAvailable : t.backendMissing}`,
-            ),
-          ),
-        );
+          { className: "at-alert" },
+          h.createElement("div", null, h.createElement("div", { className: "at-alert-title" }, t.settingsLabel), h.createElement("div", { className: "at-alert-body" }, t.statusWeb)),
+        ),
+      );
+    }
+    if (!cfg) return null;
+
+    const statusText = namer.paused
+      ? t.statusPaused
+      : !cfg.updateExisting
+        ? t.statusActiveOnce
+        : t.statusActive;
+    const isApi = cfg.backend === "deepseek";
+    const okCount = BACKEND_IDS.filter((id) => probes[id]).length;
 
     // 配置变动后旧测试结论失效。
     const patchCfg = (patch: {
@@ -135,7 +126,6 @@ export function makeSettingsSection(ctx: PluginContext, namer: Namer, t: Copy) {
       void namer.setConfig(patch);
     };
     const runTest = () => {
-      if (!cfg) return;
       setTesting(true);
       setTestResult(null);
       testBackend(
@@ -153,113 +143,274 @@ export function makeSettingsSection(ctx: PluginContext, namer: Namer, t: Copy) {
     // ctx.react 的 createElement 处理器不带事件泛型；宿主只传 React 合成事件，
     // 形状在参数上声明一次，不做运行期校验。
     type FieldEvent = { target: { value: string } };
-    type CheckEvent = { target: { checked: boolean } };
-    const configForm =
-      ctx.host.isWeb || !cfg
-        ? null
-        : h.createElement(
+
+    const chevron = h.createElement(
+      "svg",
+      { className: "at-chev", width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 },
+      h.createElement("polyline", { points: "6 9 12 15 18 9" }),
+    );
+
+    /** 一步手风琴：头部 = 完成标记 + 标题 + 摘要 + chevron，体部展开时才渲染。 */
+    const step = (id: StepId, num: number, done: boolean, title: string, sub: string, body: ReactNode) =>
+      h.createElement(
+        "div",
+        { key: id, className: `at-step${open[id] ? " open" : ""}${done ? " done" : ""}` },
+        h.createElement(
+          "button",
+          {
+            type: "button",
+            className: "at-step-head",
+            onClick: () => setOpen((cur) => ({ ...cur, [id]: !cur[id] })),
+          },
+          h.createElement("span", { className: "at-step-num" }, done ? "✓" : String(num)),
+          h.createElement(
+            "span",
+            { className: "at-step-text" },
+            h.createElement("span", { className: "at-step-title" }, title),
+            h.createElement("span", { className: "at-step-sub" }, sub),
+          ),
+          chevron,
+        ),
+        open[id] ? h.createElement("div", { className: "at-step-body" }, body) : null,
+      );
+
+    // ---------- 步骤 1：运行状态 ----------
+    const lastDone = namer.lastDone;
+    const lastError = namer.lastError;
+    const statusBody = [
+      h.createElement(
+        "div",
+        { key: "chips", className: "at-chips" },
+        BACKEND_IDS.map((id) =>
+          h.createElement(
+            "span",
+            { key: id, className: `at-chip${probes[id] ? " ok" : ""}` },
+            h.createElement("span", { className: "at-dot" }),
+            h.createElement("span", { className: "at-mono" }, id),
+            id === "deepseek"
+              ? `\u00a0${probes[id] === undefined ? "…" : probes[id] ? t.deepseekReady : t.deepseekNoKey}`
+              : probes[id] === undefined
+                ? "\u00a0…"
+                : probes[id]
+                  ? null
+                  : `\u00a0${t.backendMissing}`,
+          ),
+        ),
+      ),
+      lastDone
+        ? h.createElement(
             "div",
-            { className: "auto-title-config" },
-            h.createElement(
-              "label",
-              { className: "auto-title-field" },
-              h.createElement("span", null, t.backendField),
-              h.createElement(
-                "select",
-                {
-                  value: cfg.backend,
-                  onChange: (e: FieldEvent) => patchCfg({ backend: e.target.value as BackendId }),
-                },
-                BACKEND_IDS.map((id) =>
-                  h.createElement(
-                    "option",
-                    { key: id, value: id },
-                    id === "deepseek" ? "deepseek (API)" : `${id} (CLI)`,
-                  ),
-                ),
-              ),
-            ),
-            h.createElement(
-              "label",
-              { className: "auto-title-field" },
-              h.createElement("span", null, t.modelField),
-              h.createElement("input", {
-                type: "text",
-                value: cfg.model,
-                placeholder: t.modelPlaceholder,
-                onChange: (e: FieldEvent) => {
-                  setCfg((cur) => (cur ? { ...cur, model: e.target.value } : cur));
-                  setTestResult(null);
-                },
-                onBlur: () => void namer.setConfig({ model: cfg.model }),
-              }),
-            ),
-            cfg.backend === "deepseek"
-              ? h.createElement(
-                  "label",
-                  { className: "auto-title-field" },
-                  h.createElement("span", null, t.apiKeyField),
-                  h.createElement("input", {
-                    type: "password",
-                    value: cfg.apiKey,
-                    placeholder: "sk-…",
-                    onChange: (e: FieldEvent) => {
-                      setCfg((cur) => (cur ? { ...cur, apiKey: e.target.value } : cur));
-                      setTestResult(null);
-                    },
-                    onBlur: () => void namer.setConfig({ apiKey: cfg.apiKey }),
-                  }),
-                )
-              : null,
-            cfg.backend === "deepseek"
-              ? h.createElement("p", { className: "auto-title-field-hint" }, t.apiKeyHint)
-              : null,
-            h.createElement(
-              "label",
-              { className: "auto-title-field" },
-              h.createElement("span", null, t.updateExistingField),
-              h.createElement("input", {
-                type: "checkbox",
-                checked: cfg.updateExisting,
-                onChange: (e: CheckEvent) => patchCfg({ updateExisting: e.target.checked }),
-              }),
-            ),
-            h.createElement("p", { className: "auto-title-field-hint" }, t.updateExistingHint),
+            { key: "done", className: "at-kv" },
             h.createElement(
               "div",
-              { className: "auto-title-test" },
+              { className: "at-kv-row" },
+              h.createElement("span", { className: "at-k" }, t.lastDonePrefix),
               h.createElement(
-                "button",
-                {
-                  type: "button",
-                  className: "auto-title-btn",
-                  disabled: testing,
-                  onClick: runTest,
-                },
-                testing ? t.testing : t.testBtn,
+                "span",
+                { className: "at-v at-ellipsis" },
+                lastDone.kind === "kept" ? t.lastDoneKept : lastDone.title,
               ),
-              testResult
-                ? h.createElement(
-                    "span",
-                    { className: `auto-title-test-result${testResult.ok ? " ok" : ""}` },
-                    testResult.ok
-                      ? `${t.testOkPrefix}${testResult.text}`
-                      : `${t.testFailPrefix}${testResult.text}`,
-                  )
-                : null,
             ),
-          );
+            h.createElement(
+              "div",
+              { className: "at-kv-row" },
+              h.createElement("span", { className: "at-k" }),
+              h.createElement("span", { className: "at-small" }, new Date(lastDone.at).toLocaleString()),
+            ),
+          )
+        : null,
+      // 命名失败在后台队列里发生，用户无处可见；最近一条错误展示在这里，
+      // 下一次成功命名后由 Namer 清除并 notify 刷新。
+      lastError
+        ? h.createElement(
+            "div",
+            { key: "error", className: "at-alert bad" },
+            h.createElement(
+              "div",
+              null,
+              h.createElement("div", { className: "at-alert-title" }, t.lastErrorPrefix),
+              h.createElement(
+                "div",
+                { className: "at-alert-body" },
+                `${lastError.engine}/${lastError.sid.slice(0, 8)}… · ${new Date(lastError.at).toLocaleString()} — ${lastError.message}`,
+              ),
+            ),
+          )
+        : null,
+    ];
+
+    // ---------- 步骤 2：命名后端 ----------
+    const backendBody = [
+      h.createElement(
+        "div",
+        { key: "backend", className: "at-field" },
+        h.createElement("label", { className: "at-label" }, t.backendField),
+        h.createElement(
+          "select",
+          {
+            className: "at-select",
+            value: cfg.backend,
+            onChange: (e: FieldEvent) => patchCfg({ backend: e.target.value as BackendId }),
+          },
+          BACKEND_IDS.map((id) =>
+            h.createElement("option", { key: id, value: id }, id === "deepseek" ? "deepseek (API)" : `${id} (CLI)`),
+          ),
+        ),
+      ),
+      h.createElement(
+        "div",
+        { key: "model", className: "at-field" },
+        h.createElement(
+          "label",
+          { className: "at-label" },
+          t.modelField,
+          h.createElement("span", { className: "at-label-opt" }, t.modelOptional),
+        ),
+        h.createElement("input", {
+          className: "at-input at-mono",
+          type: "text",
+          value: cfg.model,
+          placeholder: t.modelPlaceholder,
+          onChange: (e: FieldEvent) => {
+            setCfg((cur) => (cur ? { ...cur, model: e.target.value } : cur));
+            setTestResult(null);
+          },
+          onBlur: () => void namer.setConfig({ model: cfg.model }),
+        }),
+      ),
+    ];
+
+    // ---------- 步骤 3：API 凭据（仅 deepseek） ----------
+    const credsBody = [
+      h.createElement(
+        "div",
+        { key: "key", className: "at-field" },
+        h.createElement("label", { className: "at-label" }, t.apiKeyField),
+        h.createElement(
+          "div",
+          { className: "at-input-wrap" },
+          h.createElement("input", {
+            className: "at-input at-mono",
+            type: showKey ? "text" : "password",
+            value: cfg.apiKey,
+            placeholder: "sk-…",
+            onChange: (e: FieldEvent) => {
+              setCfg((cur) => (cur ? { ...cur, apiKey: e.target.value } : cur));
+              setTestResult(null);
+            },
+            onBlur: () => void namer.setConfig({ apiKey: cfg.apiKey }),
+          }),
+          h.createElement(
+            "button",
+            {
+              type: "button",
+              className: "at-eye",
+              title: showKey ? t.keyHide : t.keyShow,
+              onClick: () => setShowKey((v) => !v),
+            },
+            showKey ? "🙈" : "👁",
+          ),
+        ),
+        h.createElement("p", { className: "at-field-hint" }, t.apiKeyHint),
+      ),
+    ];
+
+    // ---------- 步骤 4：行为与验证 ----------
+    const policyOpt = (on: boolean, value: boolean, title: string, desc: string) =>
+      h.createElement(
+        "button",
+        {
+          type: "button",
+          className: `at-radio-opt${on ? " on" : ""}`,
+          onClick: () => patchCfg({ updateExisting: value }),
+        },
+        h.createElement("span", { className: "at-radio-dot" }),
+        h.createElement(
+          "span",
+          null,
+          h.createElement("span", { className: "at-radio-title" }, title),
+          h.createElement("span", { className: "at-radio-desc" }, desc),
+        ),
+      );
+    const behaviorBody = [
+      h.createElement(
+        "div",
+        { key: "policy", className: "at-radio-row" },
+        policyOpt(!cfg.updateExisting, false, t.policyOnceTitle, t.policyOnceDesc),
+        policyOpt(cfg.updateExisting, true, t.policyFollowTitle, t.policyFollowDesc),
+      ),
+      h.createElement("hr", { key: "sep", className: "at-sep" }),
+      h.createElement(
+        "div",
+        { key: "test", className: "at-test" },
+        h.createElement(
+          "button",
+          { type: "button", className: "at-btn primary", disabled: testing, onClick: runTest },
+          testing
+            ? [h.createElement("span", { key: "s", className: "at-spin" }), t.testing]
+            : t.testBtn,
+        ),
+      ),
+      testResult
+        ? h.createElement(
+            "div",
+            { key: "result", className: `at-alert${testResult.ok ? " ok" : " bad"}` },
+            h.createElement(
+              "div",
+              null,
+              h.createElement(
+                "div",
+                { className: "at-alert-title" },
+                testResult.ok ? t.testOkPrefix.trimEnd() : t.testFailPrefix.trimEnd(),
+              ),
+              h.createElement("div", { className: "at-alert-body" }, testResult.text),
+            ),
+          )
+        : null,
+    ];
 
     return h.createElement(
       "div",
-      { className: "auto-title-settings" },
-      h.createElement("p", { className: "auto-title-status" }, statusText),
-      backendRow,
-      doneRow,
-      errorRow,
-      h.createElement("h4", { className: "auto-title-heading" }, t.sectionConfig),
-      configForm,
-      h.createElement("p", { className: "auto-title-hint" }, t.hint),
+      { className: "auto-title-root" },
+      h.createElement(
+        "div",
+        { className: "at-topbar" },
+        h.createElement(
+          "span",
+          { className: `at-badge${namer.paused ? " warn" : " ok"}` },
+          h.createElement("span", { className: `at-dot${namer.paused ? "" : " pulse"}` }),
+          namer.paused ? t.badgePaused : t.badgeRunning,
+        ),
+        h.createElement("span", { className: "at-topbar-text" }, statusText),
+      ),
+      step(
+        "status",
+        1,
+        true,
+        t.stepStatus,
+        t.backendsSummary.replace("{ok}", String(okCount)).replace("{total}", String(BACKEND_IDS.length)),
+        statusBody,
+      ),
+      step(
+        "backend",
+        2,
+        true,
+        t.stepBackend,
+        `${cfg.backend} (${isApi ? "API" : "CLI"}) · ${cfg.model.trim() || BACKEND_DEFAULT_MODEL[cfg.backend]}`,
+        backendBody,
+      ),
+      isApi
+        ? step("creds", 3, cfg.apiKey.trim() !== "", t.stepCredentials, cfg.apiKey.trim() ? t.credsConfigured : t.credsMissing, credsBody)
+        : null,
+      step(
+        "behavior",
+        isApi ? 4 : 3,
+        testResult?.ok === true,
+        t.stepBehavior,
+        `${cfg.updateExisting ? t.policyFollowTitle : t.policyOnceTitle}`,
+        behaviorBody,
+      ),
+      h.createElement("p", { className: "at-foot-hint" }, t.hint),
     );
   };
 }
