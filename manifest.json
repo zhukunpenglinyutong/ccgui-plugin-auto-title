@@ -8,6 +8,8 @@
   "description": "每轮对话结束后用本机 CLI 或 DeepSeek 生成「emoji + 对象｜目标」式会话标题，支持 codex / omp / pi / claude；不覆盖手动改名，可暂停、可只命名一次。",
   "repo": "zhukunpenglinyutong/ccgui-plugin-auto-title",
   "license": "MIT",
+  "icon": "docs/icon.png",
+  "screenshots": ["docs/screenshot-1.png", "docs/screenshot-2.png"],
   "keywords": ["title", "naming", "session", "auto-title"],
   "tier": "js",
   "permissions": [

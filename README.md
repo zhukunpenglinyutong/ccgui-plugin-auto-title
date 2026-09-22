@@ -2,6 +2,17 @@
 
 参考 [oil-codex-title](https://github.com/oil-oil/oil-codex-title) 的思路，按 desktop-cc-gui 的实际架构重做：每轮对话结束后，用本机已登录的 CLI 模型生成「类别 emoji + 对象｜目标」标题（如 `🧩 邮箱验证码｜过期修复`），经各引擎可用的标题通道写入，宿主侧边栏/标签页在下一次扫描后显示。
 
+## 界面
+
+设置 → 插件 → 自动命名（引导步骤）：
+
+| 浅色 | 深色 |
+| --- | --- |
+| ![设置页 浅色](docs/screenshot-1.png) | ![设置页 深色](docs/screenshot-2.png) |
+
+> 素材放在 `docs/`，由 `manifest.json` 的 `icon` / `screenshots` 声明，市场详情页
+> 图集按默认分支直接读取——换图不需要发版。
+
 ## 支持的引擎与标题通道
 
 | 引擎 | 转录位置 | 写入通道 |
