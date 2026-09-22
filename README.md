@@ -4,14 +4,17 @@
 
 ## 界面
 
-设置 → 插件 → 自动命名（引导步骤）：
+![旧标题 → 新标题](docs/screenshot-1.png)
+
+设置 → 插件 → 自动命名（引导步骤），浅色 / 深色：
 
 | 浅色 | 深色 |
 | --- | --- |
-| ![设置页 浅色](docs/screenshot-1.png) | ![设置页 深色](docs/screenshot-2.png) |
+| ![设置页 浅色](docs/screenshot-2.png) | ![设置页 深色](docs/screenshot-3.png) |
 
-> 素材放在 `docs/`，由 `manifest.json` 的 `icon` / `screenshots` 声明，市场详情页
-> 图集按默认分支直接读取——换图不需要发版。
+> 首图由 `design/auto-title-promo.html` 渲染（标题对照款式）；素材放在 `docs/`，
+> 由 `manifest.json` 的 `icon` / `screenshots` 声明，市场详情页图集按默认分支
+> 直接读取——换图不需要发版。
 
 ## 支持的引擎与标题通道
 

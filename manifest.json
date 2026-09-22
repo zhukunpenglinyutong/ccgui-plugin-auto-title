@@ -9,7 +9,7 @@
   "repo": "zhukunpenglinyutong/ccgui-plugin-auto-title",
   "license": "MIT",
   "icon": "docs/icon.png",
-  "screenshots": ["docs/screenshot-1.png", "docs/screenshot-2.png"],
+  "screenshots": ["docs/screenshot-1.png", "docs/screenshot-2.png", "docs/screenshot-3.png"],
   "keywords": ["title", "naming", "session", "auto-title"],
   "tier": "js",
   "permissions": [
