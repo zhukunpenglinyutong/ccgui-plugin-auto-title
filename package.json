@@ -1,6 +1,6 @@
 {
   "name": "ccgui-plugin-auto-title",
-  "version": "0.1.0",
+  "version": "0.7.1",
   "private": true,
   "description": "CC GUI 插件：Codex 会话自动命名（参考 oil-codex-title）",
   "type": "module",
