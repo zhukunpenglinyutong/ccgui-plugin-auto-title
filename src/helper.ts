@@ -18,8 +18,8 @@
  * 快照里的当前标题/冲突标题统一读 app.db（显示事实源），避免各引擎格式漂移。
  */
 export const HELPER_SCRIPT = String.raw`
-import io
 import glob
+import io
 import json
 import os
 import re
@@ -27,6 +27,10 @@ import sqlite3
 import sys
 from datetime import datetime, timezone
 
+# Windows 终端默认代码页为 cp936(GBK)，列印 Emoji/数学减号等字符会抛
+# UnicodeEncodeError；此处把 stdout/stderr 强制为 UTF-8。
+# stdout 是机器可读 JSON，且 json.dumps 走默认 ensure_ascii=True（纯 ASCII
+# 转义），所以即使宿主按 ANSI 代码页解码也不会乱码——不依赖宿主的解码约定。
 for _stream in ("stdout", "stderr"):
     _s = getattr(sys, _stream, None)
     if _s and hasattr(_s, "reconfigure"):
@@ -227,7 +231,7 @@ def snapshot(engine, sid):
            "turns": [], "existing_names": others}
     path = find_file(engine, sid)
     if not path:
-        print(json.dumps(out, ensure_ascii=False))
+        print(json.dumps(out))
         return
     # omp/pi 的 cwd 在 session 行、claude 在消息行、codex 在 session_meta，都在头部。
     head = read_head(path)
@@ -244,7 +248,7 @@ def snapshot(engine, sid):
     window = [m for _, m in sorted(users + assistants)]
     out["turns"] = [{"role": r, "text": t[:PER_MSG]} for r, t in window]
     out["found"] = bool(msgs)
-    print(json.dumps(out, ensure_ascii=False))
+    print(json.dumps(out))
 
 
 def rewrite_title_line(path, title):
@@ -305,7 +309,7 @@ def apply(engine, sid, title):
         except (OSError, sqlite3.Error) as error:
             result["ok"] = False
             result["error"] = str(error)[:200]
-    print(json.dumps(result, ensure_ascii=False))
+    print(json.dumps(result))
 
 
 def main():
